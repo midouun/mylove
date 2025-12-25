@@ -2,122 +2,286 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Our Private Cottage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Messenger Love</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { margin: 0; font-family: sans-serif; overflow: hidden; height: 100vh; background: #000; }
-        
-        /* الخلفية */
-        .bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif') center/cover;
-            opacity: 0.6; z-index: -1;
+        /* إعدادات الخطوط والألوان العامة لتشبه ماسنجر */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { 
+            margin: 0; padding: 0; 
+            font-family: Helvetica, Arial, sans-serif; 
+            background-color: #fff; 
+            height: 100dvh; 
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* شاشة الدخول */
-        #login {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        /* --- شاشة تسجيل الدخول --- */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 2000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: rgba(0,0,0,0.8); z-index: 10; color: #fff;
         }
-        input { padding: 10px; margin: 5px; border-radius: 20px; border: none; text-align: center; }
-        button { padding: 10px 20px; border-radius: 20px; border: none; cursor: pointer; background: #ff4757; color: white; font-weight: bold; }
+        .login-logo { font-size: 80px; color: #0084ff; margin-bottom: 20px; }
+        .login-input {
+            width: 80%; padding: 15px; margin: 10px 0;
+            border: 1px solid #ddd; border-radius: 10px;
+            background: #f5f6f7; text-align: center; font-size: 16px;
+        }
+        .login-btn {
+            width: 80%; padding: 15px; background: #0084ff;
+            color: white; border: none; border-radius: 10px;
+            font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px;
+        }
 
-        /* الشات */
-        #chat { display: none; flex-direction: column; height: 100%; }
-        #msgs { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        /* --- واجهة الشات (نسخة ماسنجر) --- */
+        #chat-container { display: none; flex-direction: column; height: 100%; }
+
+        /* الهيدر العلوي */
+        .header {
+            padding: 10px 15px;
+            background: #fff;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #ddd; display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .username { font-weight: bold; font-size: 17px; color: #000; }
+        .header-icons { display: flex; gap: 20px; color: #0084ff; font-size: 22px; }
+
+        /* منطقة الرسائل */
+        #messages-area {
+            flex: 1; overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column; gap: 2px;
+            background: #fff;
+        }
+
+        .message-row { display: flex; align-items: flex-end; margin-bottom: 5px; }
         
-        .msg { max-width: 70%; padding: 10px 15px; border-radius: 15px; color: #fff; word-wrap: break-word; }
-        .mine { align-self: flex-end; background: linear-gradient(45deg, #6c5ce7, #a29bfe); border-bottom-left-radius: 0; }
-        .theirs { align-self: flex-start; background: linear-gradient(45deg, #ff7675, #fab1a0); border-bottom-right-radius: 0; color: #333; }
+        .bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            max-width: 75%;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        /* رسائلي (أزرق - يمين) */
+        .mine-row { justify-content: flex-end; }
+        .mine-bubble {
+            background-color: #0084ff;
+            color: white;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* رسائل الطرف الآخر (رمادي - يسار) */
+        .theirs-row { justify-content: flex-start; }
+        .partner-avatar {
+            width: 28px; height: 28px; border-radius: 50%; background: #ccc;
+            margin-left: 8px; /* مسافة صغيرة للعربية */
+            overflow: hidden;
+        }
+        .theirs-bubble {
+            background-color: #e4e6eb;
+            color: #050505;
+            border-bottom-right-radius: 18px;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* الصور والصوتيات */
+        .msg-img { max-width: 200px; border-radius: 10px; }
+        audio { height: 35px; max-width: 220px; }
+
+        /* شريط الكتابة السفلي */
+        .footer {
+            padding: 8px 10px;
+            background: #fff;
+            display: flex; align-items: center; gap: 10px;
+            border-top: 1px solid #eee;
+        }
         
-        .controls { padding: 10px; background: rgba(0,0,0,0.7); display: flex; gap: 5px; align-items: center; }
-        #txt { flex: 1; }
-        .icon-btn { background: #333; color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; }
-        img { max-width: 200px; border-radius: 10px; }
+        /* الأيقونات الزرقاء */
+        .icon-btn {
+            font-size: 22px; color: #0084ff;
+            background: none; border: none; padding: 5px;
+            cursor: pointer;
+        }
+
+        /* حقل الكتابة الدائري */
+        .input-wrapper {
+            flex: 1;
+            background: #f0f2f5;
+            border-radius: 20px;
+            padding: 8px 15px;
+            display: flex; align-items: center;
+        }
+        #msg-in {
+            flex: 1; background: transparent; border: none;
+            font-size: 15px; color: #050505;
+        }
+        .emoji-icon { color: #0084ff; font-size: 20px; margin-right: 5px; }
+
+        /* زر التسجيل (يتغير لونه عند التسجيل) */
+        .recording { color: red !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
     </style>
 </head>
 <body>
-    <div class="bg"></div>
 
-    <div id="login">
-        <h2>تسجيل الدخول ❤️</h2>
-        <input id="u" placeholder="الاسم (alaa / miloud)">
-        <input id="p" type="password" placeholder="كلمة المرور">
-        <button onclick="login()">دخول</button>
-        <p id="err" style="color:red"></p>
+    <div id="login-screen">
+        <i class="fab fa-facebook-messenger login-logo"></i>
+        <h2 style="color:#333; margin-top:0;">تسجيل الدخول</h2>
+        <input type="text" id="u-in" class="login-input" placeholder="اسم المستخدم (alaa/miloud)">
+        <input type="password" id="p-in" class="login-input" placeholder="كلمة المرور">
+        <button class="login-btn" onclick="doLogin()">دخول</button>
+        <p id="err-msg" style="color: red; font-size: 14px; margin-top:10px;"></p>
     </div>
 
-    <div id="chat">
-        <div id="msgs"></div>
-        <div class="controls">
-            <button class="icon-btn" onclick="document.getElementById('f').click()">📷</button>
-            <button class="icon-btn" id="rec" ontouchstart="startRec()" ontouchend="stopRec()" onmousedown="startRec()" onmouseup="stopRec()">🎤</button>
-            <input id="txt" type="text" placeholder="اكتب...">
-            <button class="icon-btn" onclick="send('text')">➤</button>
-            <input type="file" id="f" hidden accept="image/*" onchange="send('image')">
+    <div id="chat-container">
+        <div class="header">
+            <div class="header-icons" style="font-size: 20px; color: #0084ff;">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+            <div class="user-info">
+                <div class="avatar">
+                    <img src="https://cdn-icons-png.flaticon.com/512/194/194938.png" alt="User">
+                </div>
+                <div style="text-align: right;">
+                    <div class="username" id="partner-name">شريك حياتي</div>
+                    <div style="font-size: 12px; color: #65676b;">نشط الآن</div>
+                </div>
+            </div>
+            <div class="header-icons">
+                <i class="fas fa-phone-alt"></i>
+                <i class="fas fa-video"></i>
+                <i class="fas fa-info-circle"></i>
+            </div>
+        </div>
+
+        <div id="messages-area"></div>
+
+        <div class="footer">
+            <button class="icon-btn" onclick="document.getElementById('file-in').click()"><i class="fas fa-plus-circle"></i></button>
+            <button class="icon-btn" onclick="document.getElementById('file-in').click()"><i class="fas fa-camera"></i></button>
+            <button class="icon-btn" onclick="document.getElementById('file-in').click()"><i class="fas fa-image"></i></button>
+            <button class="icon-btn" id="mic-btn" ontouchstart="startRec()" ontouchend="stopRec()"><i class="fas fa-microphone"></i></button>
+            
+            <div class="input-wrapper">
+                <input type="text" id="msg-in" placeholder="رسالة..." autocomplete="off">
+                <i class="fas fa-smile emoji-icon"></i>
+            </div>
+            
+            <button class="icon-btn" onclick="sendTxt()"><i class="fas fa-paper-plane"></i></button>
+            
+            <input type="file" id="file-in" hidden accept="image/*" onchange="sendFile()">
         </div>
     </div>
 
     <script>
         const socket = io();
-        let user = '';
-        let mediaRec, chunks = [];
+        let myUser = '';
+        let mediaRec, audioChunks = [];
 
-        function login() {
-            const u = document.getElementById('u').value.toLowerCase();
-            const p = document.getElementById('p').value;
+        function doLogin() {
+            const u = document.getElementById('u-in').value.toLowerCase().trim();
+            const p = document.getElementById('p-in').value;
+            if(!u || !p) return;
             socket.emit('login', { username: u, password: p });
         }
 
-        socket.on('login_success', (d) => {
-            user = d.username;
-            document.getElementById('login').style.display = 'none';
-            document.getElementById('chat').style.display = 'flex';
+        socket.on('login_success', (data) => {
+            myUser = data.username;
+            // تحديد اسم الطرف الآخر تلقائياً في الأعلى
+            const partner = (myUser === 'alaa') ? 'Miloud ❤️' : 'Alaa ❤️';
+            document.getElementById('partner-name').innerText = partner;
+            
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex';
         });
 
-        socket.on('login_error', (m) => document.getElementById('err').innerText = m);
+        socket.on('login_error', (msg) => document.getElementById('err-msg').innerText = msg);
 
-        function send(type) {
-            let content;
-            if (type === 'text') {
-                content = document.getElementById('txt').value;
-                if (!content) return;
-                document.getElementById('txt').value = '';
-            } else if (type === 'image') {
-                const reader = new FileReader();
-                reader.onload = (e) => socket.emit('chat_message', { type, content: e.target.result, sender: user });
-                reader.readAsDataURL(document.getElementById('f').files[0]);
-                return;
-            }
-            socket.emit('chat_message', { type, content, sender: user });
+        function sendTxt() {
+            const txt = document.getElementById('msg-in').value;
+            if(!txt.trim()) return;
+            socket.emit('chat_message', { type: 'text', content: txt, sender: myUser });
+            document.getElementById('msg-in').value = '';
         }
 
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
-            mediaRec = new MediaRecorder(s);
-            mediaRec.ondataavailable = e => chunks.push(e.data);
+        function sendFile() {
+            const file = document.getElementById('file-in').files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => socket.emit('chat_message', { type: 'image', content: e.target.result, sender: myUser });
+            reader.readAsDataURL(file);
+        }
+
+        // إعداد التسجيل الصوتي
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            mediaRec = new MediaRecorder(stream);
+            mediaRec.ondataavailable = e => audioChunks.push(e.data);
             mediaRec.onstop = () => {
-                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const blob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
                 const reader = new FileReader();
-                reader.onload = (e) => socket.emit('chat_message', { type: 'audio', content: e.target.result, sender: user });
+                reader.onload = (e) => socket.emit('chat_message', { type: 'audio', content: e.target.result, sender: myUser });
                 reader.readAsDataURL(blob);
-                chunks = [];
+                audioChunks = [];
             };
         });
 
-        function startRec() { if(mediaRec) { mediaRec.start(); document.getElementById('rec').style.background = 'red'; } }
-        function stopRec() { if(mediaRec) { mediaRec.stop(); document.getElementById('rec').style.background = '#333'; } }
+        function startRec() {
+            if(mediaRec && mediaRec.state === "inactive") {
+                mediaRec.start();
+                document.getElementById('mic-btn').classList.add('recording');
+            }
+        }
+        function stopRec() {
+            if(mediaRec && mediaRec.state === "recording") {
+                mediaRec.stop();
+                document.getElementById('mic-btn').classList.remove('recording');
+            }
+        }
 
-        socket.on('new_message', (d) => {
-            const div = document.createElement('div');
-            div.className = `msg ${d.sender === user ? 'mine' : 'theirs'}`;
-            if (d.type === 'text') div.innerText = d.content;
-            else if (d.type === 'image') div.innerHTML = `<img src="${d.content}">`;
-            else if (d.type === 'audio') div.innerHTML = `<audio controls src="${d.content}"></audio>`;
+        socket.on('new_message', (data) => {
+            const container = document.getElementById('messages-area');
+            const isMine = data.sender === myUser;
             
-            document.getElementById('msgs').appendChild(div);
-            document.getElementById('msgs').scrollTop = 99999;
+            // إنشاء صف الرسالة (لتحديد اليمين أو اليسار)
+            const row = document.createElement('div');
+            row.className = `message-row ${isMine ? 'mine-row' : 'theirs-row'}`;
+
+            // إذا كانت الرسالة من الطرف الآخر، نضيف الصورة الصغيرة
+            if (!isMine) {
+                const avatar = document.createElement('div');
+                avatar.className = 'partner-avatar';
+                avatar.innerHTML = '<img src="https://cdn-icons-png.flaticon.com/512/194/194938.png" style="width:100%; height:100%;">';
+                row.appendChild(avatar);
+            }
+
+            // فقاعة الرسالة
+            const bubble = document.createElement('div');
+            bubble.className = `bubble ${isMine ? 'mine-bubble' : 'theirs-bubble'}`;
+
+            if(data.type === 'text') bubble.innerText = data.content;
+            else if(data.type === 'image') bubble.innerHTML = `<img src="${data.content}" class="msg-img">`;
+            else if(data.type === 'audio') bubble.innerHTML = `<audio controls src="${data.content}"></audio>`;
+
+            row.appendChild(bubble);
+            container.appendChild(row);
+            
+            // التمرير للأسفل
+            container.scrollTop = container.scrollHeight;
         });
     </script>
 </body>
